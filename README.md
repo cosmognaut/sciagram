@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="assets/demo_bw.jpg" alt="demo ASCII art generated using sciagram" />
+    <img src="./assets/demo_bw.jpg" alt="demo ASCII art generated using sciagram" />
 </p>
 <h1 align="center">sciagram!</h1>
 <p align="center">Fun little ASCII art generation project</p>
@@ -13,8 +13,20 @@ _sciagram_ has a single dependency - [Pillow](https://pypi.org/project/pillow/),
 
 ## Usage
 This is aimed at a PyPI release, but I haven't really done that yet as the code is still a bit "weak" and not package-worthy. So in caveman-fashion I humbly ask you to generate images manually for now :)
-
-list steps here
+1. Clone the repository locally
+   ```bash
+   git clone https://github.com/cosmognaut/sciagram.git
+   cd sciagram
+   ```
+2. Move an image of yours to the root folder if you want to run the program from there. You can also do this inside `src/sciagram/`.
+   ```bash
+   mv sample.jpg path-to-clone/
+   ```
+3. You can now just use `uv run` to run the program, it will automatically install dependencies for you and activate the virtual environment!
+   ```bash
+   uv run -m src.sciagram.main
+   ```
+This "caveman" method will be changed in the future, for sure.
 
 ## Ideas
 Right now the code is in a very rudimentary stage, so expect a LOT of changes. Some ideas I have been interested in:
