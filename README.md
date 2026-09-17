@@ -35,3 +35,4 @@ Right now the code is in a very rudimentary stage, so expect a LOT of changes. S
 3. RGB color generation mode. Should be easy with Pillow. I already have the RGB tuples and I just need to wrap each printed character with ANSI escape codes. (PRIORITY)
 4. Local brightness exploration, ex. if a terminal cell is 20px by 10px then I could divide the image into blocks of 20x10 pixels and calculate a "local" brightness for that, and use unicode characters this time for brightness. Still B&W but maybe cooler?
 5. A mechanism for preserving original image proportions during manipulation. Right now we are following a naive rule where we just scale up/down to `(term_cols, term_rows)`. (PRIORITY)
+6. Color inversion - light to dark and dark to light.

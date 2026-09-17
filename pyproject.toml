@@ -1,7 +1,7 @@
 [project]
 name = "sciagram"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.0.1"
+description = "easy and fun ASCII art generation!"
 readme = "README.md"
 authors = [
     { name = "Ishuman", email = "ishuman2006@gmail.com" }
