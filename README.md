@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="./assets/demo_bw.png" alt="demo ASCII art generated using sciagram" />
+    <img src="https://raw.githubusercontent.com/cosmognaut/sciagram/cf7848e8855d27255b6262e0164e46c1725e5707/assets/sciagram_rendered.png" alt="demo ASCII art generated using sciagram" />
 </p>
 <h1 align="center">sciagram!</h1>
 <p align="center">Fun little ASCII art generation project</p>
