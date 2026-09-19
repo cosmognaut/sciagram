@@ -1,2 +1,1 @@
-def hello() -> str:
-    return "Hello from sciagram!"
+from sciagram.converter import ImageToASCII # noqa: F401
