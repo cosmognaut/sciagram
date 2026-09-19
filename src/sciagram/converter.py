@@ -153,6 +153,6 @@ class ImageToASCII:
             print()
 
 if __name__ == "__main__":
-    converter = ImageToASCII(image_url="/home/ishu/Downloads/my photo.JPG", true_term=True, brightness_method="luminosity", color=True, sizing="maxres")
+    converter = ImageToASCII(image_url="/home/ishu/Projects/sciagram/assets/sciagram_wordmark.png", true_term=True, brightness_method="luminosity", color=True, sizing="maxres")
     # final_mat = converter.convert()
     converter.print_to_term()
