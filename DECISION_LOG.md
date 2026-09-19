@@ -36,3 +36,7 @@
 - **Decision**: Query fd 0 (`os.get_terminal_size(0)`) to determine terminal dimensions.
 - **Reasoning**: Allows piping stdout to pagers like `less -r` while still preserving the actual terminal window width from stdin.
 - **Observed**: Tested via `uv run -m src.sciagram.converter | less -r`. Output rendered at full terminal width.
+
+### 9. Package Release 0.0.2
+- **Decision**: Bump version to 0.0.2, export `ImageToASCII` from root package.
+- **Observed**: Wheel verified with `zipfile -l`. Contains `converter.py` and `__init__.py`.
