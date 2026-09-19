@@ -17,3 +17,13 @@ Now let me tackle RGB color generation mode. Should be easy with Pillow. I alrea
  function that checks which of the three values is the most prevalent, and on basis of that assigns an R or G or B color. But wait, this is not true color representation.
  What if I want TrueColor 24-bit ANSI? I think I will have to map specific RGB values to ANSI codes.
  Let me discuss this with the brainstorm or pacer skill.
+ Hear me out: printf '\033[38;2;0;255;0m GREEN TEXT \033[0m\n' prints GREEN TEXT in the color green to the terminal. The current step is to get this to work via python. This sequence was given to me by an LLM, so I don't know, maybe a 2/10 cognitive deficit?
+ That is, I would follow the format specified on https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors. It's simple: the first character is the escape sequence (\033), the second one is called "control sequence introducer" as mentioned on https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_(Select_Graphic_Rendition)_parame, that is [. It starts a sequence. The sequence itself is simple too - it's a select graphici rendition (SDR) command:
+ 38;2;R;G;Bm sets RGB to foreground and 48;2;R;G;Bm sets RGB to the background. Finally, we clear the color styling back to default using ESC[0m which is \033[0m. Without resetting the command is even simpler: printf '\033[38;2;0;255;0m GREEN TEXT\n'. Now the question is - how to implement this in python?
+ Let me take a quick break first.
+
+ I am back; print(f"\033[38;2;{red};{green};{blue}m{text}") works perfectly in python. I will not add the reset sequence right now as I want to test what happens if I don't add it.
+great, now the next step I propose is to modify the existing converter and add a
+ config option for colored output. Then if that option is enabled I simply add the
+ whole ANSI sequence to my character array.
+ Done! That worked without the reset sequence. It outputs in glorious color now! If this is not cool, I don't know what is!

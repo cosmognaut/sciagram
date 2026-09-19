@@ -25,13 +25,14 @@ class ImageToASCII:
     Attributes:
         image_url: string URL for the image to be converted
         true_term: boolean that dictates whether to resize the image according to current terminal size
-        brightness_method: string method name used to calculate the brightness
+        brightness_method: string method name (formula) used to calculate the brightness
+        color: boolean indicating whether the final output should be colored or not
         sequence: the string sequence of ASCII characters to be used
 
     For defaults, refer to the initialisation docstring.
     """
 
-    def __init__(self, image_url: str, true_term: bool = True, brightness_method: Literal["average", "min_max", "luminosity"] = "average", sequence: str = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"):
+    def __init__(self, image_url: str, true_term: bool = True, brightness_method: Literal["average", "min_max", "luminosity"] = "average", color: bool = False, sequence: str = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"):
         """
         Initialises the image to ASCII art converter.
 
@@ -39,11 +40,13 @@ class ImageToASCII:
             image_url: a string URL for the image you want to convert.
             true_term: boolean for if you want to resize the image according to your current terminal size, defaults to True. Always use True if you want best representation catered to your terminal size.
             brightness_method: method to calculate brightness; choose "luminosity" for best quality art, as that's optimised for the human eye's receptors. Defaults to "average".
+            color: boolean for if you want the final output to be colored or not. 24bit colors (8R, 8G, 8B) are used here ; please check if your terminal emulator supports this first. Defaults to False, i.e. black and white output.
             sequence: sequence for ASCII characters to be used, defaults to a standard 65 character sequence ranked by brightness.
         """
         self.image_url = image_url
         self.true_term = true_term
         self.brightness_method = brightness_method
+        self.color = color
         self.sequence = sequence
 
     def _calculate_brightness(self, red: int, green: int, blue: int) -> float:
@@ -98,7 +101,12 @@ class ImageToASCII:
                 green = pixel[1]
                 blue = pixel[2]
                 pixel_brightness = self._calculate_brightness(red, green, blue)
-                character_row.append(self._brightness_to_ascii(pixel_brightness))
+                if not self.color:
+                    # if color is not enabled, simply append the ascii character itself
+                    character_row.append(self._brightness_to_ascii(pixel_brightness))
+                else:
+                    # if color is enabled, append the ascii character along with 24-bit color sequence
+                    character_row.append(f"\033[38;2;{red};{green};{blue}m{self._brightness_to_ascii(pixel_brightness)}")
             final_matrix.append(character_row)
         return final_matrix
 
@@ -119,6 +127,6 @@ class ImageToASCII:
             print()
 
 if __name__ == "__main__":
-    converter = ImageToASCII(image_url="/home/ishu/Projects/sciagram/src/sciagram/cosmog.jpg", true_term=True, brightness_method="luminosity")
+    converter = ImageToASCII(image_url="/home/ishu/Projects/sciagram/src/sciagram/sample.jpg", true_term=True, brightness_method="luminosity", color=True)
     # final_mat = converter.convert()
     converter.print_to_term()
