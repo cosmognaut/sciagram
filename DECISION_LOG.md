@@ -18,3 +18,21 @@
 - **Decision**: Added `color: bool = False` flag to `ImageToASCII`.
 - **Implementation**: When `True`, wraps each character with `\033[38;2;R;G;Bm`.
 - **Observed**: Output verified via `uv run python -m src.sciagram.converter`.
+
+### 5. Image Sizing Strategy
+- **Decision**: Implement `fit` (contain) mode as default sizing behavior.
+- **Reasoning**: Ensures the rendered ASCII art fits completely within `(term_cols, term_rows)` without terminal scrollback distortion, accounting for monospace character cell aspect ratio (~0.5).
+
+### 6. Aspect Ratio Preserving Fit
+- **Decision**: Implemented `_fit_image` using uniform scaling factor `min(H_term / (H_img * cell_ratio), W_term / W_img)`.
+- **Observed**: Tested in `converter.py`. Output constrained within terminal bounds without distortion.
+
+### 7. Maxres Sizing Strategy
+- **Decision**: Added `sizing="maxres"` mode to maximize character resolution.
+- **Implementation**: Stretches across the major terminal dimension and scales the other via aspect and cell ratio.
+- **Observed**: Tested in `converter.py`.
+
+### 8. Piped Terminal Size Detection
+- **Decision**: Query fd 0 (`os.get_terminal_size(0)`) to determine terminal dimensions.
+- **Reasoning**: Allows piping stdout to pagers like `less -r` while still preserving the actual terminal window width from stdin.
+- **Observed**: Tested via `uv run -m src.sciagram.converter | less -r`. Output rendered at full terminal width.

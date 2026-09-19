@@ -1,0 +1,107 @@
+2026-09-19
+I am now trying to write a converter class for sciagram. I want this to work in the way that the end user writes from sciagram.converter import Converter. Hmm, for that I will have to edit the __init__.py as well. But let me think about the structure for the class itself - what configuration options should I present here?
+Let me treat the class as a blackbox for now,
+input (image URL) -> ??? -> output (a 2D array of ASCII chars). I should probably also provide a printing options for this later, maybe using pretty_print. But for now, I am only concerned with config options. Three things come to mind:
+1. brightness measurement method (three literalts, luminosity minmax or average)
+2. ASCII character sequence itself.
+3. the option to set true_term to True or False.
+I think that's it for now.
+
+Done. It works now.
+Interestingly an LLM introduced me to shutil.get_terminal_size which allows me to set a fallback terminal size (defaulting to (80, 24)). This is useful because when I tried to uv run | cat before i was hitting unrecognised ioctl device, and now I can cat it easily.
+
+I know that the proportions thing is also a priority, but I am more interested in colors right now.
+
+Now let me tackle RGB color generation mode. Should be easy with Pillow. I already have the RGB tuples and I just need to wrap each printed character with ANSI escape codes. What I can do
+ right now is to check how pillow does this - just import PIL and test an image and check how to get the color data from it. When I have the RGB data I will write a simple
+ function that checks which of the three values is the most prevalent, and on basis of that assigns an R or G or B color. But wait, this is not true color representation.
+ What if I want TrueColor 24-bit ANSI? I think I will have to map specific RGB values to ANSI codes.
+ Let me discuss this with the brainstorm or pacer skill.
+ Hear me out: printf '\033[38;2;0;255;0m GREEN TEXT \033[0m\n' prints GREEN TEXT in the color green to the terminal. The current step is to get this to work via python. This sequence was given to me by an LLM, so I don't know, maybe a 2/10 cognitive deficit?
+ That is, I would follow the format specified on https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences#extended-colors. It's simple: the first character is the escape sequence (\033), the second one is called "control sequence introducer" as mentioned on https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_(Select_Graphic_Rendition)_parame, that is [. It starts a sequence. The sequence itself is simple too - it's a select graphici rendition (SDR) command:
+ 38;2;R;G;Bm sets RGB to foreground and 48;2;R;G;Bm sets RGB to the background. Finally, we clear the color styling back to default using ESC[0m which is \033[0m. Without resetting the command is even simpler: printf '\033[38;2;0;255;0m GREEN TEXT\n'. Now the question is - how to implement this in python?
+ Let me take a quick break first.
+
+ I am back; print(f"\033[38;2;{red};{green};{blue}m{text}") works perfectly in python. I will not add the reset sequence right now as I want to test what happens if I don't add it.
+great, now the next step I propose is to modify the existing converter and add a
+ config option for colored output. Then if that option is enabled I simply add the
+ whole ANSI sequence to my character array.
+ Done! That worked without the reset sequence. It outputs in glorious color now! If this is not cool, I don't know what is! 
+ I even tested character_row.append(f"\033[38;2;{red};{green};{blue}m{self._brightness_to_ascii(pixel_brightness)}\033[0m"), i.e. adding the reset sequence too, it doesn't make a difference to the output. The LLM was wrong in warning me here?
+
+ Anyways, next on agenda:
+A mechanism for preserving original image proportions during manipulation. Right now we are following a naive rule where we just scale up/down to `(term_cols, term_rows)`. (PRIORITY)
+
+Let me recall the discussion with another LLM from yesterday.
+Okay, when I print a simple program in scratch.py which contains 10 '#' as width and 10 '#' as height, it prints a rectangle and not a square. This means that the pixel grid of the terminal is direction dependent.
+
+Let W_img, H_img be the original image pixel dimensions, both pixels.
+let C_w C_h be the terminal font cell width and height in pixels.
+let R_cell = ratio cell = C_h/C_w. For almost all monospace fonts, R_cell is approx. 2.0; is this what results in the rectangle?
+Also let N_cols and N_rows be the number of terminal character cells to render on the screen. This is what you're currently resizing for, and this is exactly what we're trying to calculate here (ideal value).
+
+When rendered on the screen, the physical dimensions are:
+width of screen/canvas = N_cols * C_w
+height of canvas = N_rows * C_h
+
+If I want the displayed aspect ratio equal to the original image's aspect ratio I can do 
+width of screen    W_img      N_cols * C_w      W_img     N_cols     2 W_img
+--------------- =  ------ => -------------- =  -----  => --------- = -------
+height of screen   H_img      N_rows * C_h      H_img     N_rows      H_img
+
+Wait I am stuck. I don't know what to solve for here. Wait, let me take my test image. 420x540. I want the resulting aspect ratio to be 540/420 = 1.2857. Currently I am doing resizing to term_cols, term_rows (width x height) which gives me this (wait, cols is columns so that's width, rows is height, I am calculating height/width here so that'd be term_rows/term_cols):
+Input aspect ratio: 1.2857142857142858
+Resulting aspect ratio: 0.2023121387283237
+I want both to be the same, no matter what the terminal rows and columns are. This means I need to multiply the resulting aspect ratio by some correction. In this case this value is ~ 6.335. I found that by simply doing resulting_ratio * x = input_ratio. This simply means that if term_rows/term_cols is multiplied by 6.335 we can preserve the aspect ratio. For this, can make term_rows (height) = 6.335 * original value. Let me see if this works, I will hardcode 6.335 this time. So let me try this: term_rows = round(6.335 * term_rows).
+
+Oh no! Now the ratio is perfect, i.e.
+Input aspect ratio: 1.2857142857142858
+Resulting aspect ratio: 1.283236994219653
+but the image is really stretched out because the image can't fit properly in the current terminal size.
+I don't know how to solve this here.
+
+I am back. I discussed this with an LLM and tried it out on pen and paper. Hear me out - the goal is NOT to preserve the final aspect ratio to be original aspect ratio; as that would produce an image that has more height than width, because monospace fonts are rectangular, not square. If we apply a monospace correction of 2.0 (i.e. two times the height than width), we get the max physical height as N_rows * 2.0, which is terminal cell height * 2. Max physical width is simply N_cols or terminal cell width.
+
+I am back again. I have spent some time on paper trying out different formulas, and I think I have found a pragmatic formula that's really simple.
+First some basic math:
+each cell is shaped like this (assuming monospace font):
+	___
+	| |
+	| |
+	| |
+	---
+It's obvious that the height is larger than the width. How large? Not a priority right now. Assume that it's two times larget. Therefore, cell width/cell height = 1/2.
+Now,
+max allowed width = number of terminal columns * cell width
+max allowed height = number of terminal rows * cell height
+take the ratiom as we don't know what cell width and height are:
+max width     terminal columns * cell width    terminal columns * 1
+---------- = ------------------------------- = --------------------
+max height    terminal rows * cell height      terminal rows * 2
+
+or, you can say: max width is terminal columns/2 and max height is terminal rows itself. (We could also say max width is terminal columns and max height is terminal rows * 2).
+Now hear me out - aspect ratio is defined as image width/image height. When aspect ratio < 1.0 I know that the height is greater than the width, i.e. the image is in a "portrait" mode. Similarly, when aspect ratio > 1.0 I know that width is greater than height and the image is in "landscape" mode.
+I propose that the max width is strictly determined by the aspect ratio itself.
+How? When an image is in portrait mode I clearly need to allocate it as much height as possible, for it to fit in a single screen. When the image is in landscape mode I need to allocate it as much width as possible for it to cleanly fit.
+Then, I can say that my algorithm is simply:
+1. calculate the aspect ratio.
+2. if aspect ratio is less than 1, set the target height to be the max possible height, i.e. terminal rows. If aspect ratio is greater than 1, set the target width to be the max possible width, i.e. terminal columns / 2.
+3. Simply resize the image based on these max "fit" values.
+That's literally it. This fits any image of any size on a single screen.
+
+Tested this algorithm on: 420x540, 1920x1080 and even 7680x4320 4K image. The idea behind this is simply that "fit" means fitting the image into the given dimensions so we have to check max dimensions first, and decide what to maximise (width or height).
+
+talked to an LLM:
+for the first counterexample, you're wrong. My formula doesn't even try to preserve aspect ratio here. It's blind to it. It just sees "fit" and tries to fit everything. So here - target width would be 100 (as we max out width as AR > 1.0), and target height would be terminal rows itself, i.e. 20.
+For counterexample 2: aspect ratio is 1. So max width or height, doesn't matter - let's do width, we get 40 and for height that's equal to the rows itself, so we get 80. Wait no, this would squish the image, which was not my intention.
+
+wait no, this is not right. I am not preserving the original image proportions here. 
+
+I am back again. Holy fuck, that took me some time to understand but I derived it by hand on paper. For the derivation refer to derivation.typ in the project root. Let me actually go and implement this now.
+
+Done. Let me focus on maxres now. This is simple - in my original formulas I just need to put either target height or target width to terminal height or terminal width respectively, based on which is to be maximised (yes, in certain setups height can be greater than width).
+
+Maxres is also implemented now.
+
+uv run -m src.sciagram.converter | less -r works perfectly now as I am using 0 tty here; see scratch.py for more details.
+I think I can bump up the version now and publish this.

@@ -10,11 +10,11 @@ Typical usage example:
 For detailed information about the attributes, refer to the class docstring.
 """
 
+import os
 import shutil
 from PIL import Image
 from typing import Literal
 
-# type PixelMatrix = list[list[tuple[int, int, int]]]
 type CharacterMatrix = list[list[str]]
 
 class ImageToASCII:
@@ -27,12 +27,14 @@ class ImageToASCII:
         true_term: boolean that dictates whether to resize the image according to current terminal size
         brightness_method: string method name (formula) used to calculate the brightness
         color: boolean indicating whether the final output should be colored or not
-        sequence: the string sequence of ASCII characters to be used
+        sizing: string art sizing sequence to be followed
+        sequence: the string sequence of ASCII characters to be used; defaults to a standard 65 characters ranked by brightness
+        cell_ratio: ratio between a terminal cell's width to its height; defaults to 0.4
 
-    For defaults, refer to the initialisation docstring.
+    For defaults on instance creation, refer to the initialisation docstring.
     """
 
-    def __init__(self, image_url: str, true_term: bool = True, brightness_method: Literal["average", "min_max", "luminosity"] = "average", color: bool = False, sequence: str = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"):
+    def __init__(self, image_url: str, true_term: bool = True, brightness_method: Literal["average", "min_max", "luminosity"] = "average", color: bool = False, sizing: Literal["fit", "maxres"] = "fit"):
         """
         Initialises the image to ASCII art converter.
 
@@ -41,13 +43,15 @@ class ImageToASCII:
             true_term: boolean for if you want to resize the image according to your current terminal size, defaults to True. Always use True if you want best representation catered to your terminal size.
             brightness_method: method to calculate brightness; choose "luminosity" for best quality art, as that's optimised for the human eye's receptors. Defaults to "average".
             color: boolean for if you want the final output to be colored or not. 24bit colors (8R, 8G, 8B) are used here ; please check if your terminal emulator supports this first. Defaults to False, i.e. black and white output.
-            sequence: sequence for ASCII characters to be used, defaults to a standard 65 character sequence ranked by brightness.
+            sizing: sizing option for the rendered art, choose "fit" if you want to fit it to the current terminal context, and "maxres" if you want maximum resolution at the cost of scrolling downwards. Defaults to "fit".
         """
         self.image_url = image_url
         self.true_term = true_term
         self.brightness_method = brightness_method
         self.color = color
-        self.sequence = sequence
+        self.sizing = sizing
+        self.sequence = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
+        self.cell_ratio = 0.4
 
     def _calculate_brightness(self, red: int, green: int, blue: int) -> float:
         """Calculate the brightness for given RGB values"""
@@ -64,15 +68,37 @@ class ImageToASCII:
         brightness_number = round((brightness/255) * (len(self.sequence) - 1))
         return self.sequence[brightness_number]
 
+    def _fit_image(self, image_width: float, image_height: float, terminal_width: int, terminal_height: int) -> tuple[int, int]:
+        """Returns a scale-preserved (width, height) tuple that preserves the original image's aspect ratio"""
+        scaling_factor = min((terminal_height/(image_height * self.cell_ratio)), (terminal_width/image_width))
+        target_width = round(image_width * scaling_factor)
+        target_height = round(image_height * scaling_factor * self.cell_ratio)
+        return (target_width, target_height)
+
+    def _maxres_image(self, image_width: float, image_height: float, terminal_width: int, terminal_height: int) -> tuple[int, int]:
+        """Returns a maximum resolution (width, height) tuple according to width or height maximisations"""
+        if terminal_width > terminal_height:
+            target_width = terminal_width 
+            target_height = round((image_height/image_width) * terminal_width * self.cell_ratio)
+        else:
+            target_height = terminal_height
+            target_width = round((image_width/(image_height * self.cell_ratio)) * terminal_height)
+        return (target_width, target_height)
+
     def _load_image(self) -> Image.Image:
         """Load an image and optionally resize it to then default terminal cell dimensions (1 char per cell corresponding to 1px)"""
         image = Image.open(self.image_url)
-        size = shutil.get_terminal_size(fallback=(80, 24)) # 80, 24 is the default fallback, I am just making it explicit here.
-        # size = os.get_terminal_size()
+        # size = shutil.get_terminal_size(fallback=(80, 24)) # 80, 24 is the default fallback, I am just making it explicit here.
+        size = os.get_terminal_size(0) # 0 because pipe could be triggered too
+        # print(f"Input aspect ratio: {image.width/image.height}")
         if self.true_term:
             term_cols, term_rows = size.columns, size.lines
-            # effective_height = round(term_rows * 0.5) # aspect ratio correction is taken to be 0.5
-            image = image.resize((term_cols, term_rows))
+            # print(f"Terminal width: {term_cols}, terminal height: {term_rows}")
+            if self.sizing == "fit":
+                image = image.resize(self._fit_image(image.width, image.height, term_cols, term_rows))
+            elif self.sizing == "maxres":
+                image = image.resize(self._maxres_image(image.width, image.height, term_cols, term_rows))
+
         # print("Successfully loaded image!")
         # print(f"Image size: {image.size}")
         return image
@@ -127,6 +153,6 @@ class ImageToASCII:
             print()
 
 if __name__ == "__main__":
-    converter = ImageToASCII(image_url="/home/ishu/Projects/sciagram/src/sciagram/sample.jpg", true_term=True, brightness_method="luminosity", color=True)
+    converter = ImageToASCII(image_url="/home/ishu/Downloads/my photo.JPG", true_term=True, brightness_method="luminosity", color=True, sizing="maxres")
     # final_mat = converter.convert()
     converter.print_to_term()
