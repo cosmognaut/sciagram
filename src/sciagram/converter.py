@@ -9,9 +9,10 @@ Typical usage example:
 
 For detailed information about the attributes, refer to the class docstring.
 """
-
+import io
 import os
 import shutil
+import urllib.request
 from PIL import Image
 from typing import Literal
 
@@ -87,9 +88,23 @@ class ImageToASCII:
             target_width = round((image_width/(image_height * self.cell_ratio)) * terminal_height)
         return (target_width, target_height)
 
+    def _load_url(self, url: str) -> Image.Image:
+        """Loads an image from a specified URL"""
+        request = urllib.request.Request(url)
+        request.add_header('User-Agent', 'urllib-example/0.1 (Contact: . . .)')
+        with urllib.request.urlopen(request) as file:
+            raw_bytes = io.BytesIO(file.read())
+            image = Image.open(raw_bytes)
+        return image
+
     def _load_image(self) -> Image.Image:
         """Load an image and optionally resize it to then default terminal cell dimensions (1 char per cell corresponding to 1px)"""
-        image = Image.open(self.image_url)
+        # if https is there, it means it's a web url.
+        # this WILL misfire on local images with http in their name
+        if "http://" or "https://" in self.image_url:
+            image = self._load_url(self.image_url)
+        else:
+            image = Image.open(self.image_url)
         if self.debug:
             print(f"Successfully loaded image of size {image.width}x{image.height}")
         # size = shutil.get_terminal_size(fallback=(80, 24)) # 80, 24 is the default fallback, I am just making it explicit here.

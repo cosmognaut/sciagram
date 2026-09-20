@@ -150,3 +150,19 @@ But for now, some priorities:
 5. more debugging support (low priority)
 
 even accomplishing the first one would allow me to cut a new (pre) release which includes GIFs and CLI. I want the CLI to be more user friendly though, I don't know how to approach that yet. Video support would be a big feature with its own release, and it would be fun to do. The goal is to play videos without any external deps using ffmpeg (which should be the only requirement).
+
+let me focus on the web URLs support for now; as it's an easy one.
+simply:
+import urllib.request
+from PIL import Image
+urllib.request.urlretrieve('Image url', "file_name")
+img = Image.open("file_name")
+I will probably want to add the file to /tmp/ so that it doesn't clutter the user's disk.
+
+No wait, I discussed this with an LLM and it had a great suggestions - Image.open() in PIL natively supports an IOstream or a bytes object. And urllib.request.urlopen creates an HTTP response object whose .read method returns the raw bytes payload - this is what you use when you do
+with urllib.request.urlopen(url) as file:
+	file.read()
+
+anyways, there's also io.BytesIO() which wraps the raw bytes returned from urllib into an in-memory binary stream which can be processed by Image.open (if you don't use it it causes valueerror: embedded null byte). This was a great suggestion as the previous one was touching the userspace. So I implemented it: sciagram $TEST_URL --color --method=luminosity works perfectly. test url is just export TEST_URL="https://upload.wikimedia.org/wikipedia/commons/2/2d/John_Carmack_2025.jpg". Note that I am using a naive check for the weburl (if the image path contains "http://" or "https://") - this will have to be OPTIMISED later.
+
+Let me turn my attention to GIFs support now. That would be awesome if I can accomplish it here, and I would cut a release after this (maybe also optimising the CLI later).

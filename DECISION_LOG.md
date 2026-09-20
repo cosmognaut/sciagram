@@ -56,3 +56,8 @@
 ### 13. Global CLI Tool Installation
 - **Decision**: Install via `uv tool install . --reinstall` into `~/.local/bin`.
 - **Observed**: Binary resolved in `$PATH` at `~/.local/bin/sciagram`.
+
+### 14. In-Memory Remote URL Fetching
+- **Decision**: Added `_load_url` using `urllib.request` with custom `User-Agent` and wrapped response in `io.BytesIO`.
+- **Reasoning**: Avoids filesystem disk writes/cleanup overhead.
+- **Observed**: Tested via `sciagram $TEST_URL --color --method=luminosity`. Output rendered directly to stdout.
