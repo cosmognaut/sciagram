@@ -69,3 +69,15 @@
 ### 15. Animation Frame Timing Mechanism (Updated)
 - **Decision**: `time.sleep(frame_duration / 1000)`. Hybrid approach ruled out.
 - **Evidence**: 30 consecutive `time.sleep(0.030)` samples showed max overshoot of 0.50ms (1.6% of frame budget). Scheduler precision is sufficient. Perceived jitter is likely variable per-frame render time, not scheduler wake latency.
+
+### 16. NumPy Vectorization (Deferred)
+- **Decision**: Deferred NumPy vectorization of pixel conversion loop.
+- **Evidence**: Profiled per-frame: conversion=3.67s, stdout write=0.197s. Conversion is 18.6x the bottleneck.
+- **Reasoning**: Other architectural work (base class, video support) takes priority. NumPy rewrite is a confirmed future milestone.
+
+### 17. Class Hierarchy
+- **Decision**: Introduced a base class with shared `__init__` and common methods (`_calculate_brightness`, `_brightness_to_ascii`, `_fit_image`, `_maxres_image`). `ImageToASCII` and `AnimationToASCII` inherit from it, each with genuinely distinct behavior. `AnimationToASCII` will gain animation-specific params (e.g. `loop`) in a future step.
+
+### 18. CLI Zero-Argument Handling
+- **Decision**: Check `len(sys.argv) == 1` in `main()` and print a descriptive usage hint instead of argparse's default error message.
+- **Observed**: `sciagram` with no arguments prints guidance message and exits cleanly.

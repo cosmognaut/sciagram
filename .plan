@@ -210,3 +210,27 @@ For rendering to the terminal print_to_term(frame) takes T_render milliseconds. 
 
 I am back. After some back and forth I have decided that time.sleep(duration/1000) seconds is the way to go as it's kind of "hostile"; as it pegs the core at 100%. I actually tested both approaches - my busy wait loop and time.sleep and found NO REAL DIFFERENCE on my machine. So this is entirely my decision to make - the agent suggests that users would "expect" time.sleep more than a busy wait loop that takes up 100% core utilisation. The LLM even provided me an empirical proof by running a spinlock which uts CPU utilisation at 99.5%. I think I am going to keep time.sleep here just for standardised behavior. But on my machine - IT LITERALLY DOESN'T MATTER. Well I haven't tested long animations yet, but for these ones - it genuinely doesn't matter.
 Anyways, let me go implement the actual interface now, AnimationToASCII.
+
+I will configure the CLI later so that it can auto detect which interface to use based on what has been fed. Future feature. Maybe a unified interface would be cooler.
+
+Oh I have implemented this. As it turns out my previous escape sequence was WRONG - I needed sys.stdout.write("\033[H?\033[?25l") # move back to home, invisibly. Interestingly, the cursor completely disappears after the execution, so I might want to restore it back using \033[?25h. Let me go do that.
+And also - holy shit is there a need for a base class these two (image and anim) can derive from. These have too many overlapping functions/helpers.
+
+Those jitters from earlier - they have disappeared too when I did the correct escape sequence. It seems that I was mistaken in deciding between time.slepe and the loop, considering I was taking in account the "jitters produced by time.sleep" which were jitters produced by my wrong sequence instead!
+
+I am back again. At relatively high resolutions I was experiencing severe jitters, and sometimes the gifs were not even rendering! I suspected this was because of python being slow - and I was kind of right:
+at regular size:
+Maximum stdout.write time: 0.01150913199671777
+conversion time: 0.1742035979987122
+
+at a relatively high resolution (cmd -):
+Maximum stdout.write time: 0.197 (approx.)
+conversion time: 3.67 
+conversion is definitely the bottleneck. For each pixel I am fetching pixel data, unpacking tuple, calling the brightness function, calling the ascii function, etc. That's a LOT of overhead.
+The solution here is numpy - it vectorises operations like brightness calculations in C-level execution time. But, I won't be rewriting my existing stuff in numpy right now because at this level I am better off solving other problems first, like:
+1. Writing a base class the two can inherit from based on shared methods
+2. adding video support
+etc.
+While numpy is definitely important, at this point I am more interested in other problems. Thus, I will defer this for now, but trust me - this will DEFINITELY be done in the future as it's a core bottleneck to performance.
+
+Let me write a GenericConverter base class now that the two can inherit from. All __init__ options will be shared amongst the two (generic url instead of URL) and helper methods would be calculate brightness, brightness to ascii, fit image, maxres image that are shared. I will probably want to extract more similarities later, but I think this is sufficient for now.
