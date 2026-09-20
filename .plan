@@ -105,3 +105,10 @@ Maxres is also implemented now.
 
 uv run -m src.sciagram.converter | less -r works perfectly now as I am using 0 tty here; see scratch.py for more details.
 I think I can bump up the version now and publish this.
+
+2026-09-20
+I am back, now the goal is to write a CLI for this tool.
+Let me think about this.
+Input: sciagram image.jpg --color=true
+Output: colored ASCII art for the image
+I am planning to use argparse for this. Let me first just take the arguments from the user and print them, and not deal with any core library stuff later.

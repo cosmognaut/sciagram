@@ -40,3 +40,11 @@
 ### 9. Package Release 0.0.2
 - **Decision**: Bump version to 0.0.2, export `ImageToASCII` from root package.
 - **Observed**: Wheel verified with `zipfile -l`. Contains `converter.py` and `__init__.py`.
+
+### 10. PyPI Deployment
+- **Decision**: Published release 0.0.2 to PyPI.
+- **Observed**: PyPI metadata API confirms version `0.0.2` active and downloadable.
+
+### 11. Font Cell Ratio Configuration
+- **Decision**: Expose `cell_ratio: float` directly as an explicit configuration parameter rather than implementing an automated TTF binary parser.
+- **Reasoning**: Keeps the codebase minimal, maintains Pillow as the sole dependency, and avoids the failure modes of parsing diverse OpenType/TrueType binary table variants.
