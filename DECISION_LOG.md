@@ -61,3 +61,11 @@
 - **Decision**: Added `_load_url` using `urllib.request` with custom `User-Agent` and wrapped response in `io.BytesIO`.
 - **Reasoning**: Avoids filesystem disk writes/cleanup overhead.
 - **Observed**: Tested via `sciagram $TEST_URL --color --method=luminosity`. Output rendered directly to stdout.
+
+### 15. Animation Frame Timing Mechanism
+- **Decision**: Standardize on `time.sleep(frame_duration / 1000)` for GIF/animation frame pacing.
+- **Reasoning**: Yields CPU time slice to the operating system scheduler and avoids pegging a core at 100% utilization, accepting OS wake latency variance over a spinlock.
+
+### 15. Animation Frame Timing Mechanism (Updated)
+- **Decision**: `time.sleep(frame_duration / 1000)`. Hybrid approach ruled out.
+- **Evidence**: 30 consecutive `time.sleep(0.030)` samples showed max overshoot of 0.50ms (1.6% of frame budget). Scheduler precision is sufficient. Perceived jitter is likely variable per-frame render time, not scheduler wake latency.
