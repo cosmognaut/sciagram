@@ -112,3 +112,41 @@ Let me think about this.
 Input: sciagram image.jpg --color=true
 Output: colored ASCII art for the image
 I am planning to use argparse for this. Let me first just take the arguments from the user and print them, and not deal with any core library stuff later.
+
+Great, I have done some tests in non_lib/cli.py by following https://docs.python.org/3/howto/argparse.html#argparse-tutorial. I think I am ready to implement the sciagram CLI now.
+
+I'm back again; uv run cli.py /home/ishu/Downloads/koopa.jpg --color works perfectly. I am thinking of adding more options based on what the config requires:
+--method for brightness method (optional)
+--size for sizing (literal between fit and maxres)
+--debug maybe in the future for printing intermediate steps?
+
+how do I set it to sciagram though? should I add tools table? Something like:
+[project.scripts]
+my-uv-tool = "my_uv_tool.cli:main"
+my-np-version = "my_uv_tool.utils:numpy_version"
+this is what I saw online.
+I tried:
+▪ ishu sciagram  main $ uv run sciagram                                           t
+Traceback (most recent call last):
+  File "/home/ishu/Projects/sciagram/.venv/bin/sciagram", line 4, in <module>
+    from src.sciagram.cli import main
+ModuleNotFoundError: No module named 'src'
+But that doesn't work, so it means that I will have to create a main function in cli.py and import from sciagram.cli instead of src.sciagram.cli. Let me go implement all of this.
+Hmm, I need to work on the debugging option more. It's not on my priority list right now.
+It seems that Literal["average", "minmax", "luminosity"] as type in argument doesn't work because union types are not allowed; I will use the choices option instead.
+Done; uv run cli.py /home/ishu/Downloads/koopa.jpg --size=maxres --color --method=luminosity --debug works perfectly.
+
+It seems that uv run sciagram /home/ishu/Downloads/koopa.jpg --color --size=maxres --method=luminosity also works. I wanted to make it just sciagram (not uv run sciagram), but I don't know how to do that.
+
+Ah, it works now!
+sciagram was added to /home/ishu/.local/bin after uv tool install . --reinstall. Now I need to create a way to make it into a package.
+
+Oh wait, it seems that images from the web don't work at all! I will look into the pillow docs for this.
+But for now, some priorities:
+1. GIFs support
+2. making the CLI more user friendly
+3. video suport
+4. making images from the web work.
+5. more debugging support (low priority)
+
+even accomplishing the first one would allow me to cut a new (pre) release which includes GIFs and CLI. I want the CLI to be more user friendly though, I don't know how to approach that yet. Video support would be a big feature with its own release, and it would be fun to do. The goal is to play videos without any external deps using ffmpeg (which should be the only requirement).

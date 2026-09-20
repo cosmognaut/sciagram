@@ -30,6 +30,7 @@ class ImageToASCII:
         sizing: string art sizing sequence to be followed
         sequence: the string sequence of ASCII characters to be used; defaults to a standard 65 characters ranked by brightness
         cell_ratio: ratio between a terminal cell's width to its height; defaults to 0.4
+        debug: boolean to set debugging on or off; debugging enables print statements that tell you the size of your terminal, etc.
 
     For defaults on instance creation, refer to the initialisation docstring.
     """
@@ -52,6 +53,7 @@ class ImageToASCII:
         self.sizing = sizing
         self.sequence = "`^\",:;Il!i~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
         self.cell_ratio = 0.4
+        self.debug = False
 
     def _calculate_brightness(self, red: int, green: int, blue: int) -> float:
         """Calculate the brightness for given RGB values"""
@@ -88,19 +90,20 @@ class ImageToASCII:
     def _load_image(self) -> Image.Image:
         """Load an image and optionally resize it to then default terminal cell dimensions (1 char per cell corresponding to 1px)"""
         image = Image.open(self.image_url)
+        if self.debug:
+            print(f"Successfully loaded image of size {image.width}x{image.height}")
         # size = shutil.get_terminal_size(fallback=(80, 24)) # 80, 24 is the default fallback, I am just making it explicit here.
         size = os.get_terminal_size(0) # 0 because pipe could be triggered too
         # print(f"Input aspect ratio: {image.width/image.height}")
         if self.true_term:
             term_cols, term_rows = size.columns, size.lines
-            # print(f"Terminal width: {term_cols}, terminal height: {term_rows}")
+            if self.debug:
+                print(f"Terminal width: {term_cols}, terminal height: {term_rows}")
             if self.sizing == "fit":
                 image = image.resize(self._fit_image(image.width, image.height, term_cols, term_rows))
             elif self.sizing == "maxres":
                 image = image.resize(self._maxres_image(image.width, image.height, term_cols, term_rows))
 
-        # print("Successfully loaded image!")
-        # print(f"Image size: {image.size}")
         return image
 
     def convert(self) -> CharacterMatrix:

@@ -48,3 +48,11 @@
 ### 11. Font Cell Ratio Configuration
 - **Decision**: Expose `cell_ratio: float` directly as an explicit configuration parameter rather than implementing an automated TTF binary parser.
 - **Reasoning**: Keeps the codebase minimal, maintains Pillow as the sole dependency, and avoids the failure modes of parsing diverse OpenType/TrueType binary table variants.
+
+### 12. CLI Entry-Point
+- **Decision**: Added `cli.py` with `argparse` and registered `[project.scripts] sciagram = "sciagram.cli:main"`.
+- **Observed**: Executable via `uv run sciagram`.
+
+### 13. Global CLI Tool Installation
+- **Decision**: Install via `uv tool install . --reinstall` into `~/.local/bin`.
+- **Observed**: Binary resolved in `$PATH` at `~/.local/bin/sciagram`.

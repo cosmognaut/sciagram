@@ -1,17 +1,27 @@
 import argparse
+from typing import Literal
+from sciagram import ImageToASCII
 
-parser = argparse.ArgumentParser()
-parser.add_argument("square", help="display the square of a given number", type=int)
-# parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true") # store_true means assign the value True to args.verbose, not specifying this option implies False. Thus, this is an OPTIONAL argument.
+type brightness_options = Literal["average", "minmax", "luminosity"]
 
-parser.add_argument("-v", "--verbosity", help="increase output verbosity", type=int, choices=[0, 1, 2]) # note that you cannot use store_true when you're making the option have some type such as int. store_true only means "if this flag was supplied, store the value true in args.verbose"
+def main():
+    parser = argparse.ArgumentParser(prog="sciagram", description="sciagram CLI for swift ASCII art generation", epilog="thank you, and have fun :)")
 
-args = parser.parse_args()
-if args.verbosity == 2:
-    print(f"you set the verbosity level to {args.verbosity}")
-    print(f"the square of the given number is {args.square**2}")
-elif args.verbosity == 1:
-    print(f"you set the verbosity level to {args.verbosity}")
-    print(f"{args.square}^2 == {args.square**2}")
-else:
-    print(args.square**2)
+    parser.add_argument("filename", type=str, help="image URL (local for now) you want to convert to ASCII art")
+    parser.add_argument("-c", "--color", action="store_true", help="use this if you want the art to be colored")
+    parser.add_argument("-m", "--method", type=str, choices=["average", "min_max", "luminosity"], default="average", help="method used to calculate the brightness of each pixel")
+    parser.add_argument("-s", "--size", type=str, choices=["fit", "maxres"], default="fit", help="final art size; choose maxres for maximum qualtiy, and fit for fitting to current terminal dimensions")
+    parser.add_argument("-d", "--debug", action="store_true", help="enable debugging")
+
+    args = parser.parse_args()
+    if not args.color:
+        converter = ImageToASCII(image_url=args.filename, brightness_method=args.method, sizing=args.size)
+    else:
+        converter = ImageToASCII(image_url=args.filename, color=True, brightness_method=args.method, sizing=args.size)
+
+    if args.debug:
+        converter.debug = True
+    converter.print_to_term()
+
+if __name__ == "__main__":
+    main()
