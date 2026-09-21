@@ -27,3 +27,6 @@ explicit = true
 
 [project.scripts]
 sciagram = "sciagram.cli:main"
+
+[tool.pyright]
+reportPrivateImportUsage = "none"
