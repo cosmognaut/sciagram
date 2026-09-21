@@ -413,7 +413,13 @@ class VideoToASCII(GenericConverter):
     
     def display(self):
         """
-        something
+        Method for displaying the generated ASCII art to terminal.
+
+        Parameters:
+            none
+
+        Returns:
+            nothing, just displays the generated ASCII art to your terminal screen.
         """
         width, height, fps = self._frame_video()
         process = subprocess.Popen([

@@ -48,3 +48,6 @@ Right now the code is in a very rudimentary stage, so expect a LOT of changes. S
 9. Video support
 10. URL detection optimisations
 11. Disable private module error in pyproject.
+12. Half-block Unicode rendering: use `▀` (U+2580) with foreground and background ANSI 24-bit color codes to sample two vertical pixels per cell, doubling vertical resolution and eliminating background bleed. DUAL COLORED CELLS ARE A HONKING GREAT IDEA. 
+
+I think I should just focus on optimisations for now, i.e. rendering art at a much higher quality than what I am doign right now.

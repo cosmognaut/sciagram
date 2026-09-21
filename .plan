@@ -247,3 +247,10 @@ Committed. Next step: video handling (without audio for now). I will use ffmpeg 
 1. using subprocess.run to invoke ffmpeg
 2. reading the raw bytes from ffmpeg per frame
 3. rendering the first frame to the terminal using ImageToASCII for now
+
+I am back and after a lot of back and forth with my agent I have finally implemented VideoToASCII. The CLI works too, and it's nice. I think my two targets are audio implementation and formula optimisations. What I mean by formula optimisations is to essentially copy projects like chafa. Man is chafa good. They're using better formulas than me most likely. I will ask my agent to inspect their source code.
+My future plans:
+1. Implement formula optimisations inspired by chafa. Make a "retro=True" flag that renders images in my current style. If it's false, we render in chafa's style.
+2. Using ffplay implement audio processing. Now this is a tough one because I would need to keep audio and video in sync at ALL times.
+
+I am way more interested in the former now, it's quick reward as the quality is going to increase exponentially.

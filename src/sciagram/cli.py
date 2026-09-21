@@ -2,7 +2,7 @@
 
 This module contains the `sciagram` command-line interface's implementation. `sciagram` internally
 uses the `argparse` module for interacting with the command-line. It's a media-extension agnostic tool
-which can convert any media to ASCII art. (Video support pending)
+which can convert any media to ASCII art.
 
 Typical usage example:
     `sciagram /path/to/media.ext --color --size=fit --method=luminosity`
@@ -13,11 +13,12 @@ import sys
 import argparse
 from PIL import Image
 import urllib.request
-from sciagram import ImageToASCII, AnimationToASCII
 from sciagram.errors import UnreadbleFormatError
+from sciagram import ImageToASCII, AnimationToASCII, VideoToASCII
 
 Image.init()
 READBLE_FORMATS = [ext for ext, format in Image.EXTENSION.items() if format in Image.OPEN] 
+VIDEO_FORMATS = [".mp4", ".webm"] # update this later
 
 def _load_url(url: str) -> Image.Image:
     """Loads an image (for now) from a specified URL"""
@@ -55,22 +56,31 @@ def main():
         return
     # means some arguments are provided
     parser = argparse.ArgumentParser(prog="sciagram", description="sciagram CLI for swift ASCII art generation", epilog="thank you, and have fun :)")
-    parser.add_argument("filename", type=str, help="media URL you want to convert to ASCII art (no video support yet)")
+    parser.add_argument("filename", type=str, help="media URL you want to convert to ASCII art")
     parser.add_argument("-c", "--color", action="store_true", help="use this if you want the art to be colored")
     parser.add_argument("-m", "--method", type=str, choices=["average", "min_max", "luminosity"], default="average", help="method used to calculate the brightness of each pixel")
     parser.add_argument("-s", "--size", type=str, choices=["fit", "maxres"], default="fit", help="final art size; choose maxres for maximum qualtiy, and fit for fitting to current terminal dimensions")
-    parser.add_argument("-l", "--loop", action="store_true", default=False, help="enable infinite looping in case of animations")
+    parser.add_argument("-l", "--loop", action="store_true", default=False, help="enable infinite looping in case of animations; this flag is NOT supported for images and videos")
     parser.add_argument("-d", "--debug", action="store_true", help="enable experimental debugging")
 
     args = parser.parse_args()
     ext = _get_extension(args.filename)
-    if ext not in READBLE_FORMATS:
-        raise UnreadbleFormatError("The file format specified is not readble by Pillow.") 
-    animated = _is_animated(args.filename)
-    if animated:
-        converter = AnimationToASCII(url=args.filename, true_term=True, brightness_method=args.method, color=args.color, sizing=args.size, loop=args.loop)
+    if ext in VIDEO_FORMATS:
+        if args.loop:
+            print("sciagram: You cannot use the --loop flag with videos. \nTry 'sciagram --help' for more information.")
+            return
+        converter = VideoToASCII(url=args.filename, true_term=True, brightness_method=args.method, color=args.color, sizing=args.size)
     else:
-        converter = ImageToASCII(url=args.filename, true_term=True, brightness_method=args.method, color=args.color, sizing=args.size)
+        if ext not in READBLE_FORMATS:
+            raise UnreadbleFormatError("The file format specified is not readble by Pillow.") 
+        animated = _is_animated(args.filename)
+        if animated:
+            converter = AnimationToASCII(url=args.filename, true_term=True, brightness_method=args.method, color=args.color, sizing=args.size, loop=args.loop)
+        else:
+            if args.loop:
+                print("sciagram: You cannot use the --loop flag with images. \nTry 'sciagram --help' for more information.")
+                return
+            converter = ImageToASCII(url=args.filename, true_term=True, brightness_method=args.method, color=args.color, sizing=args.size)
     converter.debug = args.debug
     converter.display()
 

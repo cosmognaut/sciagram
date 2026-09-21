@@ -104,3 +104,7 @@
 - **Decision**: Implemented `VideoToASCII(GenericConverter)` streaming raw RGB frames directly from `ffmpeg` downscaled via `-s`.
 - **Flicker Fix**: Eliminated trailing `\n` on the final row (`"\n".join(lines)`), preventing 1-line viewport scroll stutter on bottom margin.
 - **Observed**: Video plays in terminal without scrolling or frame tearing.
+
+### 24. CLI Video Format Routing
+- **Decision**: Added video format detection (`.mp4`, `.webm`) to `cli.py` routing directly to `VideoToASCII`.
+- **Observed**: Video URLs and local files executed cleanly via CLI.
