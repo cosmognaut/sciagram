@@ -59,7 +59,8 @@ def main():
     parser.add_argument("-c", "--color", action="store_true", help="use this if you want the art to be colored")
     parser.add_argument("-m", "--method", type=str, choices=["average", "min_max", "luminosity"], default="average", help="method used to calculate the brightness of each pixel")
     parser.add_argument("-s", "--size", type=str, choices=["fit", "maxres"], default="fit", help="final art size; choose maxres for maximum qualtiy, and fit for fitting to current terminal dimensions")
-    parser.add_argument("-d", "--debug", action="store_true", help="enable debugging")
+    parser.add_argument("-l", "--loop", action="store_true", default=False, help="enable infinite looping in case of animations")
+    parser.add_argument("-d", "--debug", action="store_true", help="enable experimental debugging")
 
     args = parser.parse_args()
     ext = _get_extension(args.filename)
@@ -67,11 +68,11 @@ def main():
         raise UnreadbleFormatError("The file format specified is not readble by Pillow.") 
     animated = _is_animated(args.filename)
     if animated:
-        converter = AnimationToASCII(url=args.filename, true_term=True, brightness_method=args.method, color=args.color, sizing=args.size)
+        converter = AnimationToASCII(url=args.filename, true_term=True, brightness_method=args.method, color=args.color, sizing=args.size, loop=args.loop)
     else:
         converter = ImageToASCII(url=args.filename, true_term=True, brightness_method=args.method, color=args.color, sizing=args.size)
     converter.debug = args.debug
-    converter.print_to_term()
+    converter.display()
 
 if __name__ == "__main__":
     main()

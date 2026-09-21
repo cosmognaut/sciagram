@@ -81,3 +81,8 @@
 ### 18. CLI Zero-Argument Handling
 - **Decision**: Check `len(sys.argv) == 1` in `main()` and print a descriptive usage hint instead of argparse's default error message.
 - **Observed**: `sciagram` with no arguments prints guidance message and exits cleanly.
+
+### 19. Animation Looping Support
+- **Decision**: Added `loop: bool = True` to `AnimationToASCII`, caught `KeyboardInterrupt` in `display()`, and restored cursor with `\033[?25h`.
+- **Implementation**: Added `--loop` flag to `cli.py` and auto-routed via `_is_animated()`.
+- **Observed**: Looping verified; clean exit on `SIGINT` with restored cursor.

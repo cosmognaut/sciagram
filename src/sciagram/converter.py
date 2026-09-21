@@ -202,15 +202,15 @@ class ImageToASCII(GenericConverter):
         final_matrix = self._convert_image(image)
         return final_matrix
 
-    def print_to_term(self):
+    def display(self):
         """
-        Method for printing the generated ASCII art to terminal. Internally uses the convert() method.
+        Method for displaying the generated ASCII art to terminal. Internally uses the convert() method.
 
         Parameters:
             none
 
         Returns:
-            nothing, just prints the generated ASCII art to your terminal screen.
+            nothing, just displays the generated ASCII art to your terminal screen.
         """
         ascii_matrix = self.convert()
         for row in ascii_matrix:
@@ -232,11 +232,12 @@ class AnimationToASCII(GenericConverter):
         sequence: the string sequence of ASCII characters to be used; defaults to a standard 65 characters ranked by brightness
         cell_ratio: ratio between a terminal cell's width to its height; defaults to 0.4
         debug: boolean to set debugging on or off; debugging enables print statements that tell you the size of your terminal, etc.
+        loop: boolean to set infinite looping to be enabled or not
 
     For defaults on instance creation, refer to the initialisation docstring.
     """
 
-    def __init__(self, url: str, true_term: bool = True, brightness_method: Literal["average", "min_max", "luminosity"] = "average", color: bool = False, sizing: Literal["fit", "maxres"] = "fit"):
+    def __init__(self, url: str, true_term: bool = True, brightness_method: Literal["average", "min_max", "luminosity"] = "average", color: bool = False, sizing: Literal["fit", "maxres"] = "fit", loop: bool = False):
         """
         Initialises the animation to ASCII art converter.
 
@@ -246,9 +247,11 @@ class AnimationToASCII(GenericConverter):
             brightness_method: method to calculate brightness; choose "luminosity" for best quality art, as that's optimised for the human eye's receptors. Defaults to "average".
             color: boolean for if you want the final output to be colored or not. 24bit colors (8R, 8G, 8B) are used here ; please check if your terminal emulator supports this first. Defaults to False, i.e. black and white output.
             sizing: sizing option for the rendered art, choose "fit" if you want to fit it to the current terminal context, and "maxres" if you want maximum resolution at the cost of scrolling downwards. Defaults to "fit".
+            loop: boolean for if you want the animation to loop endlessly.
         """
         # add loop boolean here later.
         super().__init__(url=url, true_term=true_term, brightness_method=brightness_method, color=color, sizing=sizing)
+        self.loop = loop
 
     def _load_sequence(self) -> FrameData:
         """Load a sequence of frames and optionally resize them to the default terminal cell dimensions (1 char per cell corresponding to 1px)"""
@@ -292,35 +295,54 @@ class AnimationToASCII(GenericConverter):
             frame_durations.append(duration)
         return (character_matrices, frame_durations)
 
-    def print_to_term(self):
-        """
-        Method for printing the generated ASCII art to terminal. Internally uses the convert() method.
-
-        Parameters:
-            none
-
-        Returns:
-            nothing, just prints the generated ASCII art to your terminal screen.
-        """
-        frame_matrices, frame_durations  = self.convert()
+    def _print_to_term(self, frame_matrices: list[CharacterMatrix], frame_durations: list[float]):
+        """Internal method used to handle printing ASCII characters to the terminal screen; considers both looped and non-looped scenarios"""
         for ascii_matrix, duration in zip(frame_matrices, frame_durations):
             final_string = ""
             for row in ascii_matrix:
                 for char in row:
                     final_string += char
                 final_string += "\n"
-            try:
+            if not self.loop:
+                try:
+                    sys.stdout.write(final_string)
+                    sys.stdout.write("\n")
+                    time.sleep(duration/1000) # milliseconds
+                    sys.stdout.write("\033[H\033[?25l") # move cursor back to home, invisibly
+                except KeyboardInterrupt:
+                    break
+                sys.stdout.write("\033[?25h") # restore/un-hide the cursor
+            else:
+                # if loop is enabled, we should break only when there's an explicit KeyboardInterrupt for the entire animation
+                # this is handled by display()
                 sys.stdout.write(final_string)
                 sys.stdout.write("\n")
                 time.sleep(duration/1000) # milliseconds
-                sys.stdout.write("\033[H?\033[?25l") # move cursor back to home, invisibly
+                sys.stdout.write("\033[H\033[?25l") # move cursor back to home, invisibly
+
+    def display(self):
+        """
+        Method for displaying the generated ASCII art to terminal. Internally uses the convert() method.
+
+        Parameters:
+            none
+
+        Returns:
+            nothing, just displays the generated ASCII art to your terminal screen.
+        """
+        frame_matrices, frame_durations  = self.convert()
+        if self.loop:
+            try:
+                while True:
+                    self._print_to_term(frame_matrices, frame_durations)
             except KeyboardInterrupt:
-                break
-        sys.stdout.write("\033[?25h") # restore/un-hide the cursor
+                sys.stdout.write("\033[?25h")
+        else:
+            self._print_to_term(frame_matrices, frame_durations)
 
 if __name__ == "__main__":
-    converter = AnimationToASCII(url="/home/ishu/Downloads/cat.gif", true_term=True, brightness_method="luminosity", color=True, sizing="fit")
     converter = ImageToASCII(url="https://upload.wikimedia.org/wikipedia/commons/2/2d/John_Carmack_2025.jpg", true_term=True, brightness_method="luminosity", color=True, sizing="maxres")
-    converter = AnimationToASCII(url="https://www.icegif.com/wp-content/uploads/2023/06/icegif-389.gif", true_term=True, brightness_method="luminosity", color=True, sizing="fit")
+    # converter = AnimationToASCII(url="https://www.icegif.com/wp-content/uploads/2023/06/icegif-389.gif", true_term=True, brightness_method="luminosity", color=True, sizing="fit", loop=True)
+    converter = AnimationToASCII(url="/home/ishu/Downloads/cat.gif", true_term=True, brightness_method="luminosity", color=True, sizing="fit", loop=True)
     # final_mat = converter.convert()
-    converter.print_to_term()
+    converter.display()

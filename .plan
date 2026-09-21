@@ -234,3 +234,11 @@ etc.
 While numpy is definitely important, at this point I am more interested in other problems. Thus, I will defer this for now, but trust me - this will DEFINITELY be done in the future as it's a core bottleneck to performance.
 
 Let me write a GenericConverter base class now that the two can inherit from. All __init__ options will be shared amongst the two (generic url instead of URL) and helper methods would be calculate brightness, brightness to ascii, fit image, maxres image that are shared. I will probably want to extract more similarities later, but I think this is sufficient for now.
+
+2026-09-21
+welcome back. I will now focus my attention on two things - adding a looping option for animations and video. I will tackle the former first. loop=True for infnite looping. Exact command - uv run converter.py with the animation, expected output is an animation looping endlessly. I will handle the KeyboardInterrupt too.
+Man, sometimes I feel like a fraud for using python, as it would've been a lot more "based" if I had written this in C and had handled the raw image bytes (ex. the pixel data) myself. A rough sequence would have been to stream a byte sequence and get the metadata off it to read RGB values. Hmm, but I am using pillow for now, so that's what I am going to do.
+Anyways, let me try to implement loop=True now.
+I am also thinking of naming print_to_term to just display() - it's cleaner and I had this idea last night. 
+I actually hate how python relies on indentation. When I eventually design my own language, it would definitely use curly braces or whatever. Definitely not indents. It would be lua inspired maybe.
+Interesting, I am back and I have implemented the loop thing. It now loops infinitely whenever the --loop flag is passed or loop=True is manually set in AnimationToASCII. What happened was the two KeyboardInterrupt's were clashing with each other, so whenever one wanted to quit print_to_term's KeyboardInterrupt fired which stopped a frame but didn't stop the whole animation, so the animation couldn't be stopped. The fix was to introduce a special if self.loop condition in print_to_term that does NOT check for KeyboardInterrupt in case of looping inside print_to_term, and only checks it in display(). I think this is good for a commit now.
