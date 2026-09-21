@@ -242,3 +242,8 @@ Anyways, let me try to implement loop=True now.
 I am also thinking of naming print_to_term to just display() - it's cleaner and I had this idea last night. 
 I actually hate how python relies on indentation. When I eventually design my own language, it would definitely use curly braces or whatever. Definitely not indents. It would be lua inspired maybe.
 Interesting, I am back and I have implemented the loop thing. It now loops infinitely whenever the --loop flag is passed or loop=True is manually set in AnimationToASCII. What happened was the two KeyboardInterrupt's were clashing with each other, so whenever one wanted to quit print_to_term's KeyboardInterrupt fired which stopped a frame but didn't stop the whole animation, so the animation couldn't be stopped. The fix was to introduce a special if self.loop condition in print_to_term that does NOT check for KeyboardInterrupt in case of looping inside print_to_term, and only checks it in display(). I think this is good for a commit now.
+
+Committed. Next step: video handling (without audio for now). I will use ffmpeg for this because I don't want to introduce any deps. The LLM recommends that ffmpeg -i video.mp4 -f rawvideo -pix_fmt rgb24 -s {width}x{height} can buffer video frames directly to stdout which can be piped into python. Ah no, that's crap. My plan is a lot nicer - I will use subprocess.run to invoke ffmpeg myself and read bytes from that. The next incremental step should be:
+1. using subprocess.run to invoke ffmpeg
+2. reading the raw bytes from ffmpeg per frame
+3. rendering the first frame to the terminal using ImageToASCII for now

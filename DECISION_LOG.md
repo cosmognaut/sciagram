@@ -86,3 +86,8 @@
 - **Decision**: Added `loop: bool = True` to `AnimationToASCII`, caught `KeyboardInterrupt` in `display()`, and restored cursor with `\033[?25h`.
 - **Implementation**: Added `--loop` flag to `cli.py` and auto-routed via `_is_animated()`.
 - **Observed**: Looping verified; clean exit on `SIGINT` with restored cursor.
+
+### 20. Video Frame Extraction via FFmpeg
+- **Decision**: Stream raw video bytes via `ffmpeg -i <file> -f rawvideo -pix_fmt rgb24 -` directly into `subprocess.Popen(stdout=subprocess.PIPE)`.
+- **Implementation**: Read chunks of `W * H * 3` bytes and reconstruct using `Image.frombytes("RGB", (W, H), raw_bytes)`.
+- **Observed**: First frame extracted and rendered as ASCII in `non_lib/ffmpeg_test.py`.
