@@ -91,3 +91,16 @@
 - **Decision**: Stream raw video bytes via `ffmpeg -i <file> -f rawvideo -pix_fmt rgb24 -` directly into `subprocess.Popen(stdout=subprocess.PIPE)`.
 - **Implementation**: Read chunks of `W * H * 3` bytes and reconstruct using `Image.frombytes("RGB", (W, H), raw_bytes)`.
 - **Observed**: First frame extracted and rendered as ASCII in `non_lib/ffmpeg_test.py`.
+
+### 21. Multi-Frame Video Stream Decoding
+- **Decision**: Loop `process.stdout.read(frame_bytes)` until EOF to extract all video frames. Downscaling delegated to ffmpeg (`-s`).
+- **Observed**: Tested in `non_lib/ffmpeg_test.py`. Continuous sequence of frames decoded and rendered without pipe hangs.
+
+### 22. Video Metadata Extraction via FFprobe
+- **Decision**: Query `ffprobe` with JSON output format (`-select_streams v:0 -show_entries stream=width,height,r_frame_rate`).
+- **Observed**: Extracted `(width, height, frame_rate)` cleanly from video file without decoding frames.
+
+### 23. VideoToASCII Stream Implementation
+- **Decision**: Implemented `VideoToASCII(GenericConverter)` streaming raw RGB frames directly from `ffmpeg` downscaled via `-s`.
+- **Flicker Fix**: Eliminated trailing `\n` on the final row (`"\n".join(lines)`), preventing 1-line viewport scroll stutter on bottom margin.
+- **Observed**: Video plays in terminal without scrolling or frame tearing.

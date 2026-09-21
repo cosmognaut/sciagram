@@ -14,7 +14,9 @@ import io
 import os
 import sys
 import time
+import json
 import shutil
+import subprocess
 import urllib.request
 from typing import Literal
 from PIL import Image, ImageSequence
@@ -22,7 +24,6 @@ from PIL import Image, ImageSequence
 type CharacterMatrix = list[list[str]]
 type FrameData = list[tuple[Image.Image, float]]
 
-# video support addition?
 class GenericConverter:
     """This class models an generic media to ASCII art converter.
 
@@ -299,14 +300,14 @@ class AnimationToASCII(GenericConverter):
         """Internal method used to handle printing ASCII characters to the terminal screen; considers both looped and non-looped scenarios"""
         for ascii_matrix, duration in zip(frame_matrices, frame_durations):
             final_string = ""
+            final_string = "\033[H"
+            lines = []
             for row in ascii_matrix:
-                for char in row:
-                    final_string += char
-                final_string += "\n"
+                lines.append("".join(row))
+            final_string += "\n".join(lines)
             if not self.loop:
                 try:
                     sys.stdout.write(final_string)
-                    sys.stdout.write("\n")
                     time.sleep(duration/1000) # milliseconds
                     sys.stdout.write("\033[H\033[?25l") # move cursor back to home, invisibly
                 except KeyboardInterrupt:
@@ -316,7 +317,6 @@ class AnimationToASCII(GenericConverter):
                 # if loop is enabled, we should break only when there's an explicit KeyboardInterrupt for the entire animation
                 # this is handled by display()
                 sys.stdout.write(final_string)
-                sys.stdout.write("\n")
                 time.sleep(duration/1000) # milliseconds
                 sys.stdout.write("\033[H\033[?25l") # move cursor back to home, invisibly
 
@@ -340,9 +340,120 @@ class AnimationToASCII(GenericConverter):
         else:
             self._print_to_term(frame_matrices, frame_durations)
 
+class VideoToASCII(GenericConverter):
+    """This class models a video to ASCII art converter.
+
+    Converts any video (via a provided URL) to ASCII art ready to be printed to the terminal.
+
+    Attributes:
+        url: string URL for the video to be converted
+        true_term: boolean that dictates whether to resize the video according to current terminal size
+        brightness_method: string method name (formula) used to calculate the brightness
+        color: boolean indicating whether the final output should be colored or not
+        sizing: string art sizing sequence to be followed
+        sequence: the string sequence of ASCII characters to be used; defaults to a standard 65 characters ranked by brightness
+        cell_ratio: ratio between a terminal cell's width to its height; defaults to 0.4
+        debug: boolean to set debugging on or off; debugging enables print statements that tell you the size of your terminal, etc.
+
+    For defaults on instance creation, refer to the initialisation docstring.
+    """
+
+    def __init__(self, url: str, true_term: bool = True, brightness_method: Literal["average", "min_max", "luminosity"] = "average", color: bool = False, sizing: Literal["fit", "maxres"] = "fit"):
+        """
+        Initialises the video to ASCII art converter.
+
+        Parameters/Options:
+            url: a string URL for the video you want to convert.
+            true_term: boolean for if you want to resize the video according to your current terminal size, defaults to True. Always use True if you want best representation catered to your terminal size.
+            brightness_method: method to calculate brightness; choose "luminosity" for best quality art, as that's optimised for the human eye's receptors. Defaults to "average".
+            color: boolean for if you want the final output to be colored or not. 24bit colors (8R, 8G, 8B) are used here ; please check if your terminal emulator supports this first. Defaults to False, i.e. black and white output.
+            sizing: sizing option for the rendered art, choose "fit" if you want to fit it to the current terminal context, and "maxres" if you want maximum resolution at the cost of scrolling downwards. Defaults to "fit".
+        """
+        super().__init__(url=url, true_term=true_term, brightness_method=brightness_method, color=color, sizing=sizing)
+        # if true_term is present, I can just use ffpmpeg to quickly resize the video
+    def _get_raw_data(self) -> tuple[int, int , int]:
+        """Get data about a video, such as the width, height and the FPS"""
+        process = subprocess.Popen([
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            "-show_entries",
+            "stream=width,height,r_frame_rate",
+            "-of",
+            "json",
+            self.url,
+        ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+        get = process.stdout.read()
+        json_output = json.loads(get)
+        width = json_output['streams'][0]['width']
+        height = json_output['streams'][0]['height']
+        raw_frame_rate = json_output['streams'][0]['r_frame_rate']
+        num, deno = (int(char) for char in raw_frame_rate.split('/'))
+        frame_rate = round(num/deno)
+        return width, height, frame_rate
+
+    def _frame_video(self):
+        """Resize the video if true_term is set to be True, else just return the original video dimensions and framerate"""
+        size = os.get_terminal_size(0)
+        video_width, video_height, frame_rate = self._get_raw_data()
+        if self.true_term:
+            term_cols, term_rows = size.columns, size.lines
+            if self.debug:
+                print(f"Terminal width: {term_cols}, terminal height: {term_rows}")
+            if self.sizing == "fit":
+                video_width, video_height = self._fit_image(video_width, video_height, term_cols, term_rows)
+            elif self.sizing == "maxres":
+                video_width, video_height = self._maxres_image(video_width, video_height, term_cols, term_rows)
+        return video_width, video_height, frame_rate
+    
+    def display(self):
+        """
+        something
+        """
+        width, height, fps = self._frame_video()
+        process = subprocess.Popen([
+            "ffmpeg",
+            "-i",
+            self.url,
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-s",
+            f"{width}x{height}",
+            "-",
+        ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        try:
+            while True:
+                raw_bytes = process.stdout.read(width * height * 3) # width x height x 3 as in rgb24 there are 3 bytes (24 bits; 8 for each R G and B)
+                frame = Image.frombytes(mode="RGB", data=raw_bytes, size=(width, height))
+                ascii_matrix = self._convert_image(frame)
+                final_string = "\033[H"
+                lines = []
+                for row in ascii_matrix:
+                    lines.append("".join(row))
+                final_string += "\n".join(lines)
+                try:
+                    sys.stdout.write(final_string)
+                    time.sleep(1/fps) # each frame lasts 1/fps seconds
+                    sys.stdout.write("\033[H\033[?25l") # move cursor back to home, invisibly
+                except KeyboardInterrupt:
+                    sys.stdout.write("\033[?25h") # restore/un-hide the cursor
+                    break
+        except Exception:
+            # not enough image data
+            sys.stdout.write("\033[?25h") # restore/un-hide the cursor
+
+
 if __name__ == "__main__":
     converter = ImageToASCII(url="https://upload.wikimedia.org/wikipedia/commons/2/2d/John_Carmack_2025.jpg", true_term=True, brightness_method="luminosity", color=True, sizing="maxres")
     # converter = AnimationToASCII(url="https://www.icegif.com/wp-content/uploads/2023/06/icegif-389.gif", true_term=True, brightness_method="luminosity", color=True, sizing="fit", loop=True)
-    converter = AnimationToASCII(url="/home/ishu/Downloads/cat.gif", true_term=True, brightness_method="luminosity", color=True, sizing="fit", loop=True)
+    # converter = AnimationToASCII(url="/home/ishu/Downloads/cat.gif", true_term=True, brightness_method="luminosity", color=True, sizing="fit", loop=True)
+    converter = VideoToASCII(url="/home/ishu/Downloads/demo.mp4", true_term=False, brightness_method="luminosity", color=True, sizing="fit")
     # final_mat = converter.convert()
     converter.display()
